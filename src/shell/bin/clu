@@ -1,0 +1,46 @@
+#!/bin/sh
+# CLU control command for POSIX shells.
+if [ $# -eq 0 ] || [ "$1" = "help" ] || [ "$1" = "-h" ] || [ "$1" = "--help" ]; then
+    printf '\n  \033[1;36mCLU\033[0m \033[2m- command line first, app when you need it\033[0m\n\n'
+    printf '  %-34s\033[2m%s\033[0m\n' \
+        'clu theme [name|next|prev|list]' 'switch theme (no name opens the live picker)' \
+        'clu bg [name|next|prev|list]' 'background: grid dots hex circuit scanlines rain none' \
+        'clu accent [color|next|reset]' 'accent color: cyan amber pink ... or ff8800 or 255,136,0' \
+        'clu font <size>' 'terminal font size' \
+        'clu zen' 'focus mode: terminal only' \
+        'clu fullscreen' 'toggle fullscreen' \
+        'clu open <file>' 'view inside CLU (image, video, audio, pdf, text)' \
+        'clu edit <file>' 'built-in text editor (Ctrl+S saves)' \
+        'clu x <file|url>' 'open with the system default application' \
+        'clu fs [path]' 'point the file browser somewhere' \
+        'clu app [name]' 'launch an installed app (no name: searchable list)' \
+        'clu pin <app|url> [name]' 'pin an app or website to the tab bar' \
+        'clu unpin <name>' 'remove a pinned app' \
+        'clu web [url|search]' 'open a browser tab inside CLU' \
+        'clu tab [command]' 'new tab here, optionally running a command' \
+        'clu run <command>' 'type a command into the active tab' \
+        'clu top' 'process manager' \
+        'clu notify <text>' 'toast + system notification' \
+        'clu kb [on|off|en-US|tr-TR-Q]' 'on-screen keyboard' \
+        'clu sound [on|off]' 'sound effects' \
+        'clu bind <keys> <command>' 'e.g. clu bind Ctrl+Alt+M theme matrix' \
+        'clu unbind <keys>' 'remove a custom shortcut' \
+        'clu keys' 'list every shortcut' \
+        'clu lock' 'lock CLU now (Ctrl+Alt+L)' \
+        'clu password [on|off]' 'change the startup password, or turn the lock on/off' \
+        'clu settings | clu palette' 'settings editor / command palette' \
+        'clu reload | clu quit' 'reload the UI / quit CLU'
+    printf '\n  \033[2mKeys: Ctrl+Shift+G background, Ctrl+Shift+U accent, Ctrl+Shift+J theme (Ctrl+Alt+G/U = back)\033[0m\n'
+    printf '\n'
+    exit 0
+fi
+esc() { printf '%s' "$1" | sed -e 's/\\/\\\\/g' -e 's/"/\\"/g'; }
+json="{\"t\":\"cmd\",\"token\":\"$(esc "$CLU_TOKEN")\",\"cwd\":\"$(esc "$PWD")\",\"args\":["
+first=1
+for a in "$@"; do
+    [ $first -eq 1 ] || json="$json,"
+    json="$json\"$(esc "$a")\""
+    first=0
+done
+json="$json]}"
+printf '\033]7777;%s\007' "$(printf '%s' "$json" | base64 | tr -d '\n')"

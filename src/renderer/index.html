@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: clu-file: https:; media-src clu-file:; frame-src clu-file:; connect-src 'self'; object-src 'none'">
+    <title>CLU</title>
+    <link rel="stylesheet" href="renderer.css">
+</head>
+<body class="booting">
+    <section id="boot"></section>
+    <main id="app" hidden>
+        <aside id="col-left" class="column"></aside>
+        <section id="shell" class="frame"></section>
+        <aside id="col-right" class="column"></aside>
+        <section id="bottom">
+            <section id="filesystem" class="frame"></section>
+            <section id="keyboard" class="frame"></section>
+        </section>
+    </main>
+    <div id="layer-modals"></div>
+    <div id="layer-toasts"></div>
+    <script type="module" src="renderer.js"></script>
+</body>
+</html>
