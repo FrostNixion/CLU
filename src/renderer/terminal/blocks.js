@@ -1,6 +1,7 @@
 import { h } from "../lib/util.js";
 import { themes } from "../core/theme.js";
 import { audio } from "../core/audio.js";
+import { bus } from "../core/store.js";
 
 const BADGE_CELLS = 13;
 
@@ -92,6 +93,7 @@ export class CommandBlocks {
             act("Copy command", () => window.clu.clipboard.write(block.cmd)),
             act("Copy output", () => window.clu.clipboard.write(this.output(block))),
             act("Run again", () => this.session.run(block.cmd)),
+            act(block.ok ? "Explain with AI" : "Explain & fix with AI", () => bus.emit("ai-explain", block, this.session)),
             act("Select output", () => {
                 const start = block.marker.line + 1;
                 const end = (block.endMarker ? block.endMarker.line : start) - 1;

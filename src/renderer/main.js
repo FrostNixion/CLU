@@ -24,6 +24,7 @@ import { LAYOUTS } from "./keyboard/layouts.js";
 import { background, BACKGROUNDS } from "./ui/background.js";
 import { showLock, lockNow, isLocked } from "./ui/lockscreen.js";
 import { formatMs } from "./terminal/blocks.js";
+import { openAssistant, explainBlock, openKeyDialog } from "./ui/assistant.js";
 import { initLauncher, openMenu, pickApp, findApp, launchPinned, pin, pinWeb, unpinByName } from "./ui/launcher.js";
 import { ACCENTS, parseColor, toHex } from "./core/colors.js";
 import { ClockPanel, SysinfoPanel, HardwarePanel, CpuPanel, RamPanel, TopPanel } from "./panels/left.js";
@@ -274,6 +275,13 @@ function registerCommands() {
     c("web.new", "New web tab", () => tabs.addWeb({}).session.address.focus(), { category: T, keys: "Ctrl+Shift+N" });
     c("app.launch", "Launch app...", () => pickApp("launch"), { category: A, keys: "Ctrl+Shift+D" });
     c("app.pin", "Pin app to tab bar...", () => pickApp("pin"), { category: A });
+    c("ai.open", "Ask Claude (AI assistant)", () => openAssistant(session), { category: A, keys: "Ctrl+Shift+Space" });
+    c("ai.explainLast", "Explain last command with AI", () => {
+        const last = session() && session().blocks.last;
+        if (!last) return toast("No finished command yet", "warn");
+        explainBlock(session, last);
+    }, { category: A, keys: "Ctrl+Alt+E" });
+    c("ai.key", "Set Claude API key...", () => openKeyDialog(), { category: A });
     c("lock", "Lock CLU", () => lockNow().then(ok => ok || toast("The lock is turned off. Enable it: clu password on", "warn", 5000)), { category: A, keys: "Ctrl+Alt+L" });
     c("password", "Change password...", () => openPasswordDialog("change"), { category: A });
     c("app.menu", "Tab bar menu (web / apps)", () => openMenu(tabs.menuBtn), { category: A });
@@ -446,6 +454,13 @@ async function handleClu(args, cwd, from) {
         case "run":
             if (!arg) return need("command");
             return session() && session().run(arg);
+        case "ask": case "?":
+            return openAssistant(session, { prompt: arg || undefined });
+        case "ai":
+            if (rest[0] === "key") return openKeyDialog();
+            if (rest[0] === "forget") return window.clu.ai.setKey("").then(() => toast("API key removed", "info"));
+            if (rest[0] === "explain") return commands.run("ai.explainLast");
+            return openAssistant(session, { prompt: arg || undefined });
         case "lock":
             return commands.run("lock");
         case "copy":
@@ -611,6 +626,7 @@ async function main() {
     });
     bus.on("clu", (args, cwd, s) => handleClu(args, cwd, s).catch(e => toast(e.message, "error")));
     bus.on("modals-empty", () => session() && session().focus());
+    bus.on("ai-explain", (block, s) => explainBlock(() => s, block));
     window.addEventListener("resize", () => tabs && tabs.session && tabs.session.scheduleFit());
 
     registerCommands();

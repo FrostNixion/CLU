@@ -10,6 +10,8 @@ const apps = require("./apps");
 const { AppLock } = require("./lock");
 
 let appLock = null;
+const { Assistant } = require("./ai");
+let assistant = null;
 
 const WEB_PARTITION = "persist:web";
 
@@ -321,7 +323,7 @@ function attachDevHooks() {
 // ---------- IPC ----------
 
 // Channels refused while the app lock is engaged.
-const GATED = /^(settings:(set|reset)|pty:(create|write|kill)|sys:kill|fs:|shell:|clipboard:|apps:launch|dialog:|session:)/;
+const GATED = /^(settings:(set|reset)|pty:(create|write|kill)|sys:kill|fs:|shell:|clipboard:|apps:launch|dialog:|session:|ai:)/;
 
 // Tabs, directories and recent terminal output, so CLU reopens where it was closed.
 const sessionFile = () => path.join(app.getPath("userData"), "session.json");
@@ -346,6 +348,11 @@ function registerIpc() {
     ipcMain.on("session:saveSync", (e, data) => {
         try { e.returnValue = !appLock.locked && writeSession(data); } catch (err) { e.returnValue = false; }
     });
+
+    handle("ai:status", () => assistant.status());
+    handle("ai:setKey", key => assistant.setKey(key));
+    handle("ai:ask", (id, payload) => assistant.ask(id, payload || {}, send));
+    handle("ai:cancel", id => assistant.cancel(id));
 
     handle("lock:status", () => appLock.status());
     handle("lock:verify", pin => appLock.verify(pin));
@@ -483,6 +490,7 @@ app.on("second-instance", () => {
 app.whenReady().then(() => {
     settings = new Settings();
     appLock = new AppLock(app.getPath("userData"));
+    assistant = new Assistant(app.getPath("userData"));
     ptys = new PtyManager(send);
     protocol.handle("clu-file", handleFileProtocol);
     setupWebSession();

@@ -76,6 +76,13 @@ contextBridge.exposeInMainWorld("clu", {
         save: data => invoke("session:save", data),
         saveSync: data => ipcRenderer.sendSync("session:saveSync", data)
     },
+    ai: {
+        status: () => invoke("ai:status"),
+        setKey: key => invoke("ai:setKey", key),
+        ask: (id, payload) => invoke("ai:ask", id, payload),
+        cancel: id => invoke("ai:cancel", id),
+        onDelta: cb => subscribe("ai:delta", cb)
+    },
     lock: {
         status: () => invoke("lock:status"),
         verify: pin => invoke("lock:verify", pin),
