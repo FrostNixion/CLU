@@ -262,6 +262,79 @@ export class TrafficPanel extends Panel {
     }
 }
 
+function appName(aumid) {
+    if (!aumid) return "";
+    let s = aumid.includes("!") ? aumid.split("!").pop() : aumid;
+    s = s.replace(/\.exe$/i, "");
+    const parts = s.split(".");
+    if (parts.length > 1) s = parts.find(p => /[a-z]/i.test(p) && !/^(com|org|microsoft|software)$/i.test(p) && p.length > 2 && p !== parts[0]) || parts[0];
+    return s.replace(/WebBrowser$|Browser$/, "").replace(/([a-z])([A-Z])/g, "$1 $2").trim();
+}
+
+const fmtTime = s => (s >= 0 ? `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}` : "--:--");
+
+/** Whatever Windows' media session is playing: Spotify, browsers, players. */
+export class NowPlayingPanel extends Panel {
+    constructor(col) {
+        super(col, { id: "nowplaying", title: "NOW PLAYING", sub: "" });
+        this.art = h("img.np-art", { alt: "", hidden: true });
+        this.artFallback = h("div.np-art.np-art-empty", "♪");
+        this.title = h("div.np-title", "NOTHING PLAYING");
+        this.artist = h("div.np-artist", "");
+        this.bar = h("div.bar-fill");
+        this.time = h("span.np-time", "");
+        const btn = (label, cmd, title) => h("button.np-btn", { title, onclick: () => window.clu.media.command(cmd) }, label);
+        this.playBtn = btn("▶", "toggle", "Play / pause");
+        this.body.append(
+            h("div.np-row", this.art, this.artFallback, h("div.np-text", this.title, this.artist)),
+            h("div.bar-row", h("div.bar", this.bar), this.time),
+            h("div.np-controls", btn("⏮", "prev", "Previous"), this.playBtn, btn("⏭", "next", "Next")));
+        this.state = { active: false };
+        this.track(window.clu.media.onState(s => this.update(s)));
+        this.track(poll(() => this.tick(), 1000));
+        window.clu.media.start();
+        this.el.classList.add("idle");
+    }
+
+    update(s) {
+        if (s.thumb !== undefined) {
+            this.art.hidden = !s.thumb;
+            this.artFallback.hidden = !!s.thumb;
+            if (s.thumb) this.art.src = s.thumb;
+        }
+        this.state = s;
+        this.el.classList.toggle("idle", !s.active);
+        if (!s.active) {
+            this.title.textContent = "NOTHING PLAYING";
+            this.artist.textContent = "";
+            this.sub = "";
+            this.art.hidden = true;
+            this.artFallback.hidden = false;
+        } else {
+            this.title.textContent = s.title || "Unknown";
+            this.title.title = s.title || "";
+            this.artist.textContent = [s.artist, s.album].filter(Boolean).join(" · ");
+            this.sub = appName(s.app).toUpperCase();
+        }
+        this.playBtn.textContent = s.status === "Playing" ? "⏸" : "▶";
+        this.tick();
+    }
+
+    tick() {
+        const s = this.state;
+        if (!s.active || !(s.duration > 0)) {
+            this.bar.style.width = "0%";
+            this.time.textContent = s.active ? "LIVE" : "";
+            return;
+        }
+        let pos = s.position;
+        if (s.status === "Playing" && s.updated) pos += Math.max(0, (Date.now() - s.updated) / 1000);
+        pos = Math.min(pos, s.duration);
+        this.bar.style.width = `${(pos / s.duration * 100).toFixed(1)}%`;
+        this.time.textContent = `${fmtTime(pos)} / ${fmtTime(s.duration)}`;
+    }
+}
+
 export class StoragePanel extends Panel {
     constructor(col) {
         super(col, { id: "storage", title: "STORAGE", sub: "MOUNTED VOLUMES" });

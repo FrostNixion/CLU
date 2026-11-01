@@ -12,6 +12,8 @@ const { AppLock } = require("./lock");
 let appLock = null;
 const { Assistant } = require("./ai");
 let assistant = null;
+const { MediaBridge } = require("./media");
+let media = null;
 
 const WEB_PARTITION = "persist:web";
 
@@ -349,6 +351,9 @@ function registerIpc() {
         try { e.returnValue = !appLock.locked && writeSession(data); } catch (err) { e.returnValue = false; }
     });
 
+    handle("media:start", () => media.start());
+    handle("media:command", cmd => media.command(cmd));
+
     handle("ai:status", () => assistant.status());
     handle("ai:setKey", key => assistant.setKey(key));
     handle("ai:ask", (id, payload) => assistant.ask(id, payload || {}, send));
@@ -491,6 +496,7 @@ app.whenReady().then(() => {
     settings = new Settings();
     appLock = new AppLock(app.getPath("userData"));
     assistant = new Assistant(app.getPath("userData"));
+    media = new MediaBridge(send);
     ptys = new PtyManager(send);
     protocol.handle("clu-file", handleFileProtocol);
     setupWebSession();
@@ -502,6 +508,7 @@ app.whenReady().then(() => {
 app.on("before-quit", () => {
     app.isQuitting = true;
     if (ptys) ptys.killAll();
+    if (media) media.stop();
     if (sysWorker) sysWorker.kill();
 });
 

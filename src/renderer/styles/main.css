@@ -137,8 +137,24 @@ table.toplist tr:first-child td { font-weight: 600; }
 #panel-top { cursor: pointer; }
 #panel-top:hover h3.title p:last-child { opacity: 1; }
 
-canvas.globe { display: block; width: 100%; height: 25vh; margin: 0 auto; }
+canvas.globe { display: block; width: 100%; height: 18vh; margin: 0 auto; }
 .globe-coords { font-size: 1.05vh; opacity: .6; text-align: center; letter-spacing: .08vh; }
+/* now playing */
+.np-row { display: flex; gap: 1vh; align-items: center; }
+.np-art { width: 4.6vh; height: 4.6vh; object-fit: cover; flex: 0 0 auto; border: 1px solid var(--accent-faint); }
+.np-art-empty { display: flex; align-items: center; justify-content: center; font-size: 2.4vh; opacity: .4; background: var(--accent-ghost); }
+.np-art-empty[hidden] { display: none; }
+.np-text { min-width: 0; flex: 1; }
+.np-title { font-size: 1.55vh; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.np-artist { font-size: 1.2vh; opacity: .6; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.np-time { font-size: 1.05vh; opacity: .7; min-width: 7vh; text-align: right; font-family: var(--font-mono); }
+.np-controls { display: flex; justify-content: center; gap: 1vh; margin-top: .4vh; }
+.np-btn { background: transparent; border: 1px solid var(--accent-faint); width: 4vh; height: 2.4vh; cursor: pointer; font-size: 1.3vh; line-height: 1; }
+.np-btn:hover { background: var(--accent); color: var(--black); }
+#panel-nowplaying.idle .np-controls, #panel-nowplaying.idle .bar-row { display: none; }
+#panel-nowplaying.idle .np-art-empty { width: 3vh; height: 3vh; font-size: 1.4vh; }
+#panel-nowplaying.idle .np-title { font-size: 1.2vh; opacity: .45; font-weight: 500; }
+
 .storage-list .bar-row { margin-top: .35vh; }
 .storage-list .bar-row > span:last-child { min-width: 9vh; text-align: right; opacity: .75; }
 

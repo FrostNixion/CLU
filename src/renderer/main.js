@@ -28,7 +28,7 @@ import { openAssistant, explainBlock, openKeyDialog } from "./ui/assistant.js";
 import { initLauncher, openMenu, pickApp, findApp, launchPinned, pin, pinWeb, unpinByName } from "./ui/launcher.js";
 import { ACCENTS, parseColor, toHex } from "./core/colors.js";
 import { ClockPanel, SysinfoPanel, HardwarePanel, CpuPanel, RamPanel, TopPanel } from "./panels/left.js";
-import { NetworkPanel, GlobePanel, TrafficPanel, StoragePanel } from "./panels/right.js";
+import { NetworkPanel, GlobePanel, TrafficPanel, NowPlayingPanel, StoragePanel } from "./panels/right.js";
 
 const $ = id => document.getElementById(id);
 let tabs, files, keyboard;
@@ -454,6 +454,10 @@ async function handleClu(args, cwd, from) {
         case "run":
             if (!arg) return need("command");
             return session() && session().run(arg);
+        case "play": case "pause": case "next": case "prev":
+            return window.clu.media.command(cmd);
+        case "music": case "np":
+            return window.clu.media.command(arg === "next" || arg === "prev" ? arg : "toggle");
         case "ask": case "?":
             return openAssistant(session, { prompt: arg || undefined });
         case "ai":
@@ -590,8 +594,8 @@ async function revealUI() {
         [() => new ClockPanel(left), () => new NetworkPanel(right)],
         [() => new SysinfoPanel(left), () => new GlobePanel(right)],
         [() => new HardwarePanel(left), () => new TrafficPanel(right)],
-        [() => new CpuPanel(left), () => new StoragePanel(right)],
-        [() => new RamPanel(left)],
+        [() => new CpuPanel(left), () => new NowPlayingPanel(right)],
+        [() => new RamPanel(left), () => new StoragePanel(right)],
         [() => new TopPanel(left, { onOpen: openProcessManager })]
     ];
     for (const row of makers) {
