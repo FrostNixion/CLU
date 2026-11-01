@@ -8,11 +8,11 @@ const { Settings } = require("./settings");
 const { PtyManager, TOKEN, resolveShell } = require("./pty");
 const apps = require("./apps");
 const { AppLock } = require("./lock");
+const { Assistant } = require("./ai");
+const { MediaBridge } = require("./media");
 
 let appLock = null;
-const { Assistant } = require("./ai");
 let assistant = null;
-const { MediaBridge } = require("./media");
 let media = null;
 
 const WEB_PARTITION = "persist:web";
@@ -24,11 +24,14 @@ const flags = {
     devtools: argv.includes("--devtools")
 };
 
+app.setName("CLU");
+// Tests run against a throwaway profile so they never touch the user's settings, lock or session
+// (set before the single-instance lock, which is keyed on the profile).
+if (!app.isPackaged && process.env.CLU_USER_DATA) app.setPath("userData", process.env.CLU_USER_DATA);
+
 if (!app.requestSingleInstanceLock()) {
     app.exit(0);
 }
-
-app.setName("CLU");
 app.commandLine.appendSwitch("ignore-gpu-blocklist");
 app.commandLine.appendSwitch("enable-gpu-rasterization");
 app.commandLine.appendSwitch("enable-zero-copy");
