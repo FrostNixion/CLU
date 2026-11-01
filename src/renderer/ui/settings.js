@@ -18,6 +18,7 @@ const SCHEMA = [
     { key: "cursorStyle", label: "Cursor style", type: "select", options: ["block", "bar", "underline"] },
     { key: "cursorBlink", label: "Cursor blink", type: "bool" },
     { key: "scrollback", label: "Scrollback lines", type: "number", min: 500, max: 200000, step: 500 },
+    { key: "notifyAfterSeconds", label: "Notify when a command takes longer than (s)", desc: "0 = never", type: "number", min: 0, max: 3600 },
     { group: "Interface" },
     { key: "theme", label: "Theme", type: "select", options: () => themes.names() },
     { key: "background", label: "Background design", type: "select", options: () => Object.keys(BACKGROUNDS) },

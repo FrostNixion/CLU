@@ -8,6 +8,7 @@ import { store } from "../core/store.js";
 import { themes } from "../core/theme.js";
 import { audio } from "../core/audio.js";
 import { Emitter } from "../lib/util.js";
+import { CommandBlocks } from "./blocks.js";
 
 const ACK_CHUNK = 64 * 1024;
 
@@ -73,6 +74,7 @@ export class TerminalSession extends Emitter {
 
         this.term.open(container);
         this._enableWebgl();
+        this.blocks = new CommandBlocks(this);
 
         this.term.parser.registerOscHandler(7, data => {
             this._setCwd(decodeOsc7(data));
@@ -82,7 +84,11 @@ export class TerminalSession extends Emitter {
             let msg;
             try { msg = decodeCluPayload(data); } catch (e) { return true; }
             if (msg.t === "cwd" && msg.p) this._setCwd(msg.p);
-            else if (msg.t === "cmd") {
+            else if (msg.t === "prompt") {
+                const done = this.blocks.onPrompt(msg.last);
+                if (msg.p) this._setCwd(msg.p);
+                if (done) setTimeout(() => this.emit("command-done", done), 0);
+            } else if (msg.t === "cmd") {
                 if (msg.token !== store.info.token) {
                     console.warn("[clu] rejected command without a valid token");
                     return true;

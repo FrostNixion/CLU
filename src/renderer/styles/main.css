@@ -219,6 +219,18 @@ ul.tabs li.tab-web { font-weight: 500; }
 .xterm .xterm-viewport { background-color: transparent !important; }
 .xterm .xterm-viewport::-webkit-scrollbar { width: .7vh; }
 
+/* command block badges (xterm decorations on prompt lines) */
+.cmd-badge-host { display: flex; justify-content: flex-end; align-items: center; pointer-events: none; z-index: 6 !important; }
+.cmd-badge {
+    pointer-events: auto; cursor: pointer; font-family: var(--font-mono); font-size: 1.05vh; line-height: 1.4;
+    padding: 0 .6vh; border: 1px solid var(--accent-dim); color: var(--accent); background: var(--term-bg);
+    opacity: .75; transition: opacity .15s, background .15s; white-space: nowrap;
+}
+.cmd-badge:hover { opacity: 1; background: var(--accent); color: var(--black); }
+.cmd-badge.fail { border-color: #ff4d4d; color: #ff6b6b; }
+.cmd-badge.fail:hover { background: #ff4d4d; color: #000; }
+.cmd-menu-title { font-family: var(--font-mono); font-size: 1.15vh; opacity: .6; padding: .4vh 1.2vh .6vh; border-bottom: 1px solid var(--accent-faint); margin-bottom: .3vh; max-width: 40vh; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
 .term-search {
     position: absolute; top: 5.4vh; right: 2vh; z-index: 5; display: flex; align-items: center; gap: .6vh;
     padding: .5vh .8vh; background: var(--light-black); border: 1px solid var(--accent-dim); box-shadow: 0 .6vh 2vh rgba(0,0,0,.6);

@@ -23,6 +23,7 @@ import { Keyboard } from "./keyboard/keyboard.js";
 import { LAYOUTS } from "./keyboard/layouts.js";
 import { background, BACKGROUNDS } from "./ui/background.js";
 import { showLock, lockNow, isLocked } from "./ui/lockscreen.js";
+import { formatMs } from "./terminal/blocks.js";
 import { initLauncher, openMenu, pickApp, findApp, launchPinned, pin, pinWeb, unpinByName } from "./ui/launcher.js";
 import { ACCENTS, parseColor, toHex } from "./core/colors.js";
 import { ClockPanel, SysinfoPanel, HardwarePanel, CpuPanel, RamPanel, TopPanel } from "./panels/left.js";
@@ -143,6 +144,28 @@ function nextAccent(dir) {
     setAccent(next || "reset");
 }
 
+// ---------- command blocks ----------
+
+async function copyLastOutput() {
+    const s = session();
+    const last = s && s.blocks.last;
+    if (!last) return toast("No finished command yet", "warn");
+    await window.clu.clipboard.write(s.blocks.output(last));
+    toast(`Copied output of: ${last.cmd.slice(0, 50)}`, "info", 2000);
+}
+
+/** Long-running command finished: sound always, notification when you're looking elsewhere. */
+function onCommandDone(block, tab) {
+    const threshold = Number(store.get("notifyAfterSeconds")) || 0;
+    if (!threshold || !(block.ms >= threshold * 1000)) return;
+    audio.play(block.ok ? "granted" : "error");
+    const text = `${block.ok ? "✓ Finished" : `✗ Failed (${block.code})`} in ${formatMs(block.ms)}: ${block.cmd.slice(0, 80)}`;
+    const away = document.hidden || !document.hasFocus() || tabs.active !== tab;
+    toast(text, block.ok ? "info" : "error", 6000);
+    if (away) window.clu.win.notify("CLU", text);
+    if (tabs.active !== tab) tab.li.classList.add("activity");
+}
+
 // ---------- app lock password ----------
 
 /** mode: "change" | "on" | "off" — every mode asks for the current password. */
@@ -245,6 +268,9 @@ function registerCommands() {
     c("term.zoomIn", "Increase font size", () => setFontSize(store.get("termFontSize") + 1), { category: T, keys: "Ctrl+=" });
     c("term.zoomOut", "Decrease font size", () => setFontSize(store.get("termFontSize") - 1), { category: T, keys: "Ctrl+-" });
     c("term.zoomReset", "Reset font size", () => setFontSize(15), { category: T, keys: "Ctrl+0" });
+    c("term.prevCommand", "Jump to previous command", () => session() && session().blocks.jump(-1), { category: T, keys: "Ctrl+Shift+Up" });
+    c("term.nextCommand", "Jump to next command", () => session() && session().blocks.jump(1), { category: T, keys: "Ctrl+Shift+Down" });
+    c("term.copyLastOutput", "Copy last command output", () => copyLastOutput(), { category: T, keys: "Ctrl+Alt+C" });
     c("term.selectAll", "Select all", () => session() && session().term.selectAll(), { category: T, keys: "Ctrl+Shift+A" });
 
     c("palette", "Command palette", () => openPalette(), { category: A, keys: "Ctrl+Shift+P", global: true });
@@ -393,6 +419,8 @@ async function handleClu(args, cwd, from) {
             return session() && session().run(arg);
         case "lock":
             return commands.run("lock");
+        case "copy":
+            return copyLastOutput();
         case "password": case "passwd":
             if (arg === "off" || arg === "disable") return openPasswordDialog("off");
             if (arg === "on" || arg === "enable") return openPasswordDialog("on");
@@ -482,6 +510,7 @@ async function revealUI() {
     // Terminal first: it is what the user is waiting for.
     tabs = new TabManager($("shell"));
     initLauncher(tabs);
+    tabs.on("command-done", onCommandDone);
     tabs.on("cwd", cwd => files && files.follow(cwd));
     let refreshTimer = null;
     tabs.on("prompt", cwd => {

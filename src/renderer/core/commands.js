@@ -30,6 +30,7 @@ export function eventCombo(e) {
     let key = e.code;
     if (/^Key[A-Z]$/.test(key)) key = key.slice(3);
     else if (/^Digit\d$/.test(key)) key = key.slice(5);
+    else if (/^Arrow/.test(key)) key = key.slice(5);
     else if (key === "Equal" || key === "NumpadAdd") key = "=";
     else if (key === "Minus" || key === "NumpadSubtract") key = "-";
     else if (key === "Comma") key = ",";

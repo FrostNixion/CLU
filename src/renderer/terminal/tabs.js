@@ -109,6 +109,7 @@ export class TabManager extends Emitter {
             else li.classList.add("activity");
         });
         session.on("clu", (args, cwd, s) => bus.emit("clu", args, cwd, s));
+        session.on("command-done", block => this.emit("command-done", block, tab));
         session.on("exit", () => {
             li.classList.add("exited");
             setTimeout(() => this.close(tab), 600);

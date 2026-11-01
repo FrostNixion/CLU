@@ -22,6 +22,7 @@ function defaults() {
         accent: "",
         shortcuts: {},
         pinnedApps: [],
+        notifyAfterSeconds: 10,
         webHome: "https://duckduckgo.com",
         keyboard: detectKeyboard(),
         showKeyboard: true,
