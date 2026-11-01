@@ -25,6 +25,8 @@ function defaults() {
         notifyAfterSeconds: 10,
         restoreSession: true,
         autoLockMinutes: 15,
+        pluginsEnabled: true,
+        disabledPlugins: [],
         lockWithWindows: true,
         webHome: "https://duckduckgo.com",
         keyboard: detectKeyboard(),

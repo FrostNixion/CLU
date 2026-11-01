@@ -76,6 +76,10 @@ contextBridge.exposeInMainWorld("clu", {
         save: data => invoke("session:save", data),
         saveSync: data => ipcRenderer.sendSync("session:saveSync", data)
     },
+    plugins: {
+        list: () => invoke("plugins:list"),
+        dir: () => invoke("plugins:dir")
+    },
     media: {
         start: () => invoke("media:start"),
         command: cmd => invoke("media:command", cmd),

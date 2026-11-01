@@ -1,0 +1,6 @@
+{
+  "name": "Pomodoro",
+  "version": "1.0.0",
+  "description": "Focus timer panel. clu pomodoro [minutes|stop]",
+  "main": "index.js"
+}

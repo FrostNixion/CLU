@@ -25,6 +25,7 @@ import { background, BACKGROUNDS } from "./ui/background.js";
 import { showLock, lockNow, isLocked } from "./ui/lockscreen.js";
 import { formatMs } from "./terminal/blocks.js";
 import { openAssistant, explainBlock, openKeyDialog } from "./ui/assistant.js";
+import { loadPlugins, pluginCli, loaded } from "./core/plugins.js";
 import { initLauncher, openMenu, pickApp, findApp, launchPinned, pin, pinWeb, unpinByName } from "./ui/launcher.js";
 import { ACCENTS, parseColor, toHex } from "./core/colors.js";
 import { ClockPanel, SysinfoPanel, HardwarePanel, CpuPanel, RamPanel, TopPanel } from "./panels/left.js";
@@ -143,6 +144,28 @@ function nextAccent(dir) {
     const cur = Object.keys(ACCENTS).find(n => toHex(ACCENTS[n]) === store.get("accent")) || "";
     const next = cycle(names, cur, dir);
     setAccent(next || "reset");
+}
+
+// ---------- plugins ----------
+
+function showPlugins() {
+    const rows = loaded.length
+        ? loaded.map(p => h("tr", h("td", h("strong", p.name || p.id)), h("td", p.version || ""), h("td", p.description || ""),
+            h(`td${p.status === "loaded" ? "" : ".dim"}`, p.status || p.error || "")))
+        : [h("tr", h("td", { colspan: 4 }, "No plugins installed."))];
+    const cli = [...pluginCli.keys()].map(k => h("code", `clu ${k}`));
+    new Modal({
+        title: "Plugins",
+        className: "shortcuts-modal",
+        body: h("div",
+            h("table.shortcuts", ...rows),
+            cli.length ? h("p", "Plugin commands: ", ...cli.flatMap((c, i) => i ? [", ", c] : [c])) : null,
+            h("p.dim", "Plugins are folders in the plugins directory with a plugin.json and an ES module. They run with CLU's own rights - only install plugins you trust. See examples/plugins in the CLU repository.")),
+        buttons: [
+            { label: "Open plugins folder", keep: true, action: async () => window.clu.shell.openPath(await window.clu.plugins.dir()) },
+            { label: "Reload UI", action: () => location.reload() }
+        ]
+    });
 }
 
 // ---------- session persistence ----------
@@ -282,6 +305,7 @@ function registerCommands() {
         explainBlock(session, last);
     }, { category: A, keys: "Ctrl+Alt+E" });
     c("ai.key", "Set Claude API key...", () => openKeyDialog(), { category: A });
+    c("plugins", "Plugins...", () => showPlugins(), { category: A });
     c("lock", "Lock CLU", () => lockNow().then(ok => ok || toast("The lock is turned off. Enable it: clu password on", "warn", 5000)), { category: A, keys: "Ctrl+Alt+L" });
     c("password", "Change password...", () => openPasswordDialog("change"), { category: A });
     c("app.menu", "Tab bar menu (web / apps)", () => openMenu(tabs.menuBtn), { category: A });
@@ -386,6 +410,7 @@ function dispatchCombo(combo, inField = false) {
 }
 
 const shortcutMap = new Map();
+const addShortcut = cmd => shortcutMap.set(normalizeCombo(cmd.keys), cmd);
 
 function installShortcuts() {
     for (const cmd of [...commands.list(), ...Array.from({ length: 9 }, (_, i) => commands.get(`tab.go${i + 1}`))]) {
@@ -542,8 +567,15 @@ async function handleClu(args, cwd, from) {
             return location.reload();
         case "quit": case "exit":
             return window.clu.app.quit();
-        default:
+        case "plugins": case "plugin":
+            if (rest[0] === "dir" || rest[0] === "folder") return window.clu.shell.openPath(await window.clu.plugins.dir());
+            if (rest[0] === "reload") return location.reload();
+            return showPlugins();
+        default: {
+            const ext = pluginCli.get((cmd || "").toLowerCase());
+            if (ext) return ext.handler(rest, { cwd, session: session() });
             toast(`Unknown command "clu ${cmd}". Try: clu help`, "warn");
+        }
     }
 }
 
@@ -603,6 +635,7 @@ async function revealUI() {
         audio.play("panels");
         await delay(store.get("nointro") ? 0 : 140);
     }
+    await loadPlugins({ tabs, addShortcut, columns: { left, right } });
     app.classList.add("intro-2");
     document.body.classList.add("ready");
     await delay(600);

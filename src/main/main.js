@@ -39,6 +39,10 @@ app.commandLine.appendSwitch("enable-zero-copy");
 protocol.registerSchemesAsPrivileged([{
     scheme: "clu-file",
     privileges: { standard: true, secure: true, supportFetchAPI: true, stream: true, bypassCSP: true }
+}, {
+    // Plugins are ES modules served from <userData>/plugins (see handlePluginProtocol).
+    scheme: "clu-plugin",
+    privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true }
 }]);
 
 const RENDERER_DIR = path.join(__dirname, "..", "..", "dist");
@@ -140,6 +144,44 @@ async function handleFileProtocol(request) {
         status: 200,
         headers: { "Content-Type": type, "Content-Length": String(stat.size), "Accept-Ranges": "bytes" }
     });
+}
+
+// ---------- plugins ----------
+
+const pluginsDir = () => path.join(app.getPath("userData"), "plugins");
+
+/** Plugins: folders in <userData>/plugins with a plugin.json ({ name, description, main }). */
+async function listPlugins() {
+    const dir = pluginsDir();
+    await fs.promises.mkdir(dir, { recursive: true });
+    const out = [];
+    for (const d of await fs.promises.readdir(dir, { withFileTypes: true })) {
+        if (!d.isDirectory() || !/^[\w.-]+$/.test(d.name)) continue;
+        try {
+            const manifest = JSON.parse(await fs.promises.readFile(path.join(dir, d.name, "plugin.json"), "utf-8"));
+            const main = String(manifest.main || "index.js");
+            if (!/^[\w./-]+\.m?js$/.test(main) || main.includes("..")) throw new Error("bad main");
+            out.push({ id: d.name, name: manifest.name || d.name, version: manifest.version || "", description: manifest.description || "", main });
+        } catch (e) {
+            out.push({ id: d.name, error: `invalid plugin.json: ${e.message}` });
+        }
+    }
+    return out;
+}
+
+async function handlePluginProtocol(request) {
+    if (appLock.locked) return new Response("locked", { status: 403 });
+    const u = new URL(request.url);
+    const base = path.join(pluginsDir(), u.hostname);
+    const file = path.resolve(base, "." + decodeURIComponent(u.pathname));
+    if (!file.startsWith(base + path.sep)) return new Response("forbidden", { status: 403 });
+    try {
+        const body = await fs.promises.readFile(file);
+        const type = /\.m?js$/.test(file) ? "text/javascript" : /\.css$/.test(file) ? "text/css" : /\.json$/.test(file) ? "application/json" : "application/octet-stream";
+        return new Response(body, { headers: { "Content-Type": type } });
+    } catch (e) {
+        return new Response("not found", { status: 404 });
+    }
 }
 
 // ---------- filesystem helpers ----------
@@ -328,7 +370,7 @@ function attachDevHooks() {
 // ---------- IPC ----------
 
 // Channels refused while the app lock is engaged.
-const GATED = /^(settings:(set|reset)|pty:(create|write|kill)|sys:kill|fs:|shell:|clipboard:|apps:launch|dialog:|session:|ai:)/;
+const GATED = /^(settings:(set|reset)|pty:(create|write|kill)|sys:kill|fs:|shell:|clipboard:|apps:launch|dialog:|session:|ai:|plugins:)/;
 
 // Tabs, directories and recent terminal output, so CLU reopens where it was closed.
 const sessionFile = () => path.join(app.getPath("userData"), "session.json");
@@ -353,6 +395,9 @@ function registerIpc() {
     ipcMain.on("session:saveSync", (e, data) => {
         try { e.returnValue = !appLock.locked && writeSession(data); } catch (err) { e.returnValue = false; }
     });
+
+    handle("plugins:list", () => listPlugins());
+    handle("plugins:dir", async () => { await fs.promises.mkdir(pluginsDir(), { recursive: true }); return pluginsDir(); });
 
     handle("media:start", () => media.start());
     handle("media:command", cmd => media.command(cmd));
@@ -522,6 +567,7 @@ app.whenReady().then(() => {
     setupAutoLock();
     ptys = new PtyManager(send);
     protocol.handle("clu-file", handleFileProtocol);
+    protocol.handle("clu-plugin", handlePluginProtocol);
     setupWebSession();
     registerIpc();
     startSysWorker();
