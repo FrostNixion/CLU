@@ -32,6 +32,7 @@ const SCHEMA = [
     { key: "fsListView", label: "File browser list view", type: "bool" },
     { key: "excludeThreadsFromToplist", label: "Group processes by name", type: "bool" },
     { key: "nointro", label: "Skip boot animation", type: "bool" },
+    { key: "restoreSession", label: "Restore tabs, panes and output on start", type: "bool" },
     { key: "fullscreen", label: "Start in fullscreen", desc: "Applies on next start", type: "bool" },
     { key: "confirmOnQuit", label: "Confirm before quitting", type: "bool" },
     { group: "Audio" },

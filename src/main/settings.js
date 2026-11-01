@@ -23,6 +23,7 @@ function defaults() {
         shortcuts: {},
         pinnedApps: [],
         notifyAfterSeconds: 10,
+        restoreSession: true,
         webHome: "https://duckduckgo.com",
         keyboard: detectKeyboard(),
         showKeyboard: true,

@@ -3,6 +3,7 @@ import { FitAddon } from "@xterm/addon-fit";
 import { WebglAddon } from "@xterm/addon-webgl";
 import { WebLinksAddon } from "@xterm/addon-web-links";
 import { SearchAddon } from "@xterm/addon-search";
+import { SerializeAddon } from "@xterm/addon-serialize";
 import { Unicode11Addon } from "@xterm/addon-unicode11";
 import { store } from "../core/store.js";
 import { themes } from "../core/theme.js";
@@ -32,7 +33,7 @@ function decodeCluPayload(b64) {
  * Events: data-activity, cwd, title, exit, clu (shell -> app command)
  */
 export class TerminalSession extends Emitter {
-    constructor(container, { cwd, command } = {}) {
+    constructor(container, { cwd, command, restore } = {}) {
         super();
         this.container = container;
         this.ptyId = null;
@@ -41,6 +42,7 @@ export class TerminalSession extends Emitter {
         this.exited = false;
         this._pendingAck = 0;
         this._initialCommand = command;
+        this._restore = restore;
 
         const s = store.settings;
         this.term = new Terminal({
@@ -64,8 +66,10 @@ export class TerminalSession extends Emitter {
 
         this.fit = new FitAddon();
         this.search = new SearchAddon();
+        this.serializer = new SerializeAddon();
         this.term.loadAddon(this.fit);
         this.term.loadAddon(this.search);
+        this.term.loadAddon(this.serializer);
         this.term.loadAddon(new Unicode11Addon());
         this.term.unicode.activeVersion = "11";
         this.term.loadAddon(new WebLinksAddon((ev, uri) => {
@@ -143,6 +147,13 @@ export class TerminalSession extends Emitter {
 
     async start() {
         this.fitNow();
+        if (this._restore) {
+            // Put the previous session's output into scrollback, then clear the viewport so the
+            // new shell (ConPTY assumes an empty screen) draws from the top without overlap.
+            const divider = `\x1b[0m\r\n\x1b[2m──── restored from previous session · ${new Date().toLocaleString()} ────\x1b[0m`;
+            this.term.write(this._restore + divider + "\r\n".repeat(this.term.rows) + "\x1b[2J\x1b[H");
+            this._restore = null;
+        }
         const res = await window.clu.pty.create({
             cwd: this.cwd || undefined, cols: this.term.cols, rows: this.term.rows,
             env: this.banner ? { CLU_BANNER: this.banner } : undefined
@@ -243,6 +254,15 @@ export class TerminalSession extends Emitter {
             scrollback: s.scrollback
         });
         this.scheduleFit();
+    }
+
+    /** Recent output (with colors) for session restore. */
+    snapshot(lines = 1000) {
+        try {
+            return this.serializer.serialize({ scrollback: lines, excludeAltBuffer: true, excludeModes: true });
+        } catch (e) {
+            return "";
+        }
     }
 
     applyTheme() {

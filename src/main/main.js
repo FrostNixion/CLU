@@ -294,7 +294,8 @@ function attachDevHooks() {
     }
     if (process.env.CLU_EVAL) {
         const script = fs.readFileSync(process.env.CLU_EVAL, "utf-8");
-        win.webContents.once("did-finish-load", () => setTimeout(() => {
+        // Re-run on every load so tests can span a reload (they keep state in localStorage).
+        win.webContents.on("did-finish-load", () => setTimeout(() => {
             win.webContents.executeJavaScript(script).catch(e => console.log("[eval] failed:", e.message));
         }, Number(process.env.CLU_EVAL_DELAY || 3000)));
     }
@@ -320,12 +321,30 @@ function attachDevHooks() {
 // ---------- IPC ----------
 
 // Channels refused while the app lock is engaged.
-const GATED = /^(settings:(set|reset)|pty:(create|write|kill)|sys:kill|fs:|shell:|clipboard:|apps:launch|dialog:)/;
+const GATED = /^(settings:(set|reset)|pty:(create|write|kill)|sys:kill|fs:|shell:|clipboard:|apps:launch|dialog:|session:)/;
+
+// Tabs, directories and recent terminal output, so CLU reopens where it was closed.
+const sessionFile = () => path.join(app.getPath("userData"), "session.json");
+function writeSession(data) {
+    const json = JSON.stringify(data);
+    if (json.length > 20 * 1024 * 1024) return false;
+    fs.writeFileSync(sessionFile() + ".tmp", json, { mode: 0o600 });
+    fs.renameSync(sessionFile() + ".tmp", sessionFile());
+    return true;
+}
 
 function registerIpc() {
     const handle = (ch, fn) => ipcMain.handle(ch, (e, ...a) => {
         if (GATED.test(ch) && appLock.locked) throw new Error("CLU is locked");
         return fn(...a);
+    });
+
+    handle("session:load", () => {
+        try { return JSON.parse(fs.readFileSync(sessionFile(), "utf-8")); } catch (e) { return null; }
+    });
+    handle("session:save", data => writeSession(data));
+    ipcMain.on("session:saveSync", (e, data) => {
+        try { e.returnValue = !appLock.locked && writeSession(data); } catch (err) { e.returnValue = false; }
     });
 
     handle("lock:status", () => appLock.status());

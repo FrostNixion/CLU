@@ -144,6 +144,27 @@ function nextAccent(dir) {
     setAccent(next || "reset");
 }
 
+// ---------- session persistence ----------
+
+function setupSessionPersistence() {
+    let timer = null;
+    const save = () => {
+        clearTimeout(timer);
+        timer = null;
+        if (!store.get("restoreSession") || isLocked()) return;
+        window.clu.session.save(tabs.serialize()).catch(() => {});
+    };
+    tabs.on("changed", () => {
+        if (!timer) timer = setTimeout(save, 2000);
+    });
+    // Terminal output changes constantly; snapshot it every 30s and on exit.
+    setInterval(save, 30000);
+    window.addEventListener("beforeunload", () => {
+        if (!store.get("restoreSession") || isLocked()) return;
+        try { window.clu.session.saveSync(tabs.serialize()); } catch (e) { /* closing anyway */ }
+    });
+}
+
 // ---------- command blocks ----------
 
 async function copyLastOutput() {
@@ -256,7 +277,15 @@ function registerCommands() {
     c("lock", "Lock CLU", () => lockNow().then(ok => ok || toast("The lock is turned off. Enable it: clu password on", "warn", 5000)), { category: A, keys: "Ctrl+Alt+L" });
     c("password", "Change password...", () => openPasswordDialog("change"), { category: A });
     c("app.menu", "Tab bar menu (web / apps)", () => openMenu(tabs.menuBtn), { category: A });
-    c("tab.close", "Close tab", () => tabs.close(), { category: T, keys: "Ctrl+Shift+W" });
+    c("tab.close", "Close pane / tab", () => tabs.closePane(), { category: T, keys: "Ctrl+Shift+W" });
+    c("tab.closeAll", "Close tab (all panes)", () => tabs.close(), { category: T });
+    c("pane.splitRight", "Split pane right", () => tabs.split("row"), { category: T, keys: "Alt+Shift+=" });
+    c("pane.splitDown", "Split pane down", () => tabs.split("col"), { category: T, keys: "Alt+Shift+-" });
+    c("pane.focusLeft", "Focus pane left", () => tabs.focusDirection("left"), { category: T, keys: "Ctrl+Alt+Left" });
+    c("pane.focusRight", "Focus pane right", () => tabs.focusDirection("right"), { category: T, keys: "Ctrl+Alt+Right" });
+    c("pane.focusUp", "Focus pane up", () => tabs.focusDirection("up"), { category: T, keys: "Ctrl+Alt+Up" });
+    c("pane.focusDown", "Focus pane down", () => tabs.focusDirection("down"), { category: T, keys: "Ctrl+Alt+Down" });
+    c("session.forget", "Forget saved session", () => window.clu.session.save({ tabs: [] }).then(() => toast("Saved session cleared", "info")), { category: A });
     c("tab.next", "Next tab", () => tabs.next(), { category: T, keys: "Ctrl+Tab" });
     c("tab.prev", "Previous tab", () => tabs.prev(), { category: T, keys: "Ctrl+Shift+Tab" });
     c("tab.rename", "Rename tab", () => tabs.rename(), { category: T });
@@ -421,6 +450,9 @@ async function handleClu(args, cwd, from) {
             return commands.run("lock");
         case "copy":
             return copyLastOutput();
+        case "split":
+            if (!tabs.activeIsTerm) return toast("Splits work in terminal tabs", "warn");
+            return tabs.split(/^(down|col|v|vertical|alt)$/i.test(arg) ? "col" : "row");
         case "password": case "passwd":
             if (arg === "off" || arg === "disable") return openPasswordDialog("off");
             if (arg === "on" || arg === "enable") return openPasswordDialog("on");
@@ -519,9 +551,17 @@ async function revealUI() {
         refreshTimer = setTimeout(() => files.refresh(), 150);
     });
     const v = store.info;
-    await tabs.add({
-        banner: `\x1b[1mCLU v${v.version}\x1b[0m\x1b[2m · Electron ${v.electron} · ${v.shell.split(/[\\/]/).pop()} · type \x1b[0m\x1b[1mclu help\x1b[0m\x1b[2m to drive the UI from here\x1b[0m`
-    });
+    const banner = `\x1b[1mCLU v${v.version}\x1b[0m\x1b[2m · Electron ${v.electron} · ${v.shell.split(/[\\/]/).pop()} · type \x1b[0m\x1b[1mclu help\x1b[0m\x1b[2m to drive the UI from here\x1b[0m`;
+    let restored = false;
+    if (store.get("restoreSession")) {
+        try {
+            restored = await tabs.restore(await window.clu.session.load(), { banner });
+        } catch (e) {
+            console.error("[session] restore failed", e);
+        }
+    }
+    if (!restored && !tabs.tabs.length) await tabs.add({ banner });
+    setupSessionPersistence();
 
     files = new FileBrowser($("filesystem"), { getSession: session });
     if (session()) files.follow(session().cwd);

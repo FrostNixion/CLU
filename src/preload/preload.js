@@ -71,6 +71,11 @@ contextBridge.exposeInMainWorld("clu", {
         relaunch: () => invoke("app:relaunch"),
         reload: () => location.reload()
     },
+    session: {
+        load: () => invoke("session:load"),
+        save: data => invoke("session:save", data),
+        saveSync: data => ipcRenderer.sendSync("session:saveSync", data)
+    },
     lock: {
         status: () => invoke("lock:status"),
         verify: pin => invoke("lock:verify", pin),
