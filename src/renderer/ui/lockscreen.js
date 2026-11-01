@@ -22,7 +22,17 @@ export function showLock() {
         h(`button.lock-key${k === "⏎" ? ".enter" : ""}`, {
             onmousedown: e => { e.preventDefault(); press(k); }
         }, k)));
+    const clock = h("div.lock-clock");
+    const date = h("div.lock-date");
+    const renderClock = () => {
+        const d = new Date();
+        clock.textContent = d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: store.get("clockHours") === 12 });
+        date.textContent = d.toLocaleDateString([], { weekday: "long", day: "numeric", month: "long" }).toUpperCase();
+    };
+    renderClock();
+    const clockTimer = setInterval(renderClock, 1000);
     const box = h("div.lock-box",
+        clock, date,
         h("div.lock-ring", h("div.lock-ring-inner"), h("span.lock-logo", "CLU")),
         h("h2.lock-title", "AUTHORIZATION REQUIRED"),
         h("div.lock-user", `${(store.get("username") || store.info.username || "user").toUpperCase()}@${(store.info.hostname || "").toUpperCase()}`),
@@ -74,6 +84,7 @@ export function showLock() {
             box.classList.add("granted");
             audio.play("granted");
             clearInterval(cooldown);
+            clearInterval(clockTimer);
             await delay(700);
             el.classList.add("out");
             await delay(350);

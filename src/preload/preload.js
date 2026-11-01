@@ -93,7 +93,8 @@ contextBridge.exposeInMainWorld("clu", {
         verify: pin => invoke("lock:verify", pin),
         lock: () => invoke("lock:lock"),
         change: (current, next) => invoke("lock:change", current, next),
-        setEnabled: (current, enabled) => invoke("lock:setEnabled", current, enabled)
+        setEnabled: (current, enabled) => invoke("lock:setEnabled", current, enabled),
+        onEngaged: cb => subscribe("lock:engaged", cb)
     },
     apps: {
         list: opts => invoke("apps:list", opts),

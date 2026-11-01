@@ -3,7 +3,7 @@ const path = require("path");
 const fs = require("fs");
 const os = require("os");
 const { Readable } = require("stream");
-const { app, BrowserWindow, ipcMain, protocol, net, shell, clipboard, utilityProcess, dialog, screen, Notification, session } = require("electron");
+const { app, BrowserWindow, ipcMain, protocol, net, shell, clipboard, utilityProcess, dialog, screen, Notification, session, powerMonitor } = require("electron");
 const { Settings } = require("./settings");
 const { PtyManager, TOKEN, resolveShell } = require("./pty");
 const apps = require("./apps");
@@ -473,6 +473,25 @@ function registerIpc() {
     });
 }
 
+// ---------- auto-lock ----------
+
+// Locks when the whole system has been idle for `autoLockMinutes` (0 = off) or when
+// Windows itself locks. Uses system idle time, so typing in other apps counts as activity.
+function setupAutoLock() {
+    const engage = reason => {
+        if (!appLock.enabled || appLock.locked) return;
+        appLock.lock();
+        send("lock:engaged", reason);
+    };
+    setInterval(() => {
+        const minutes = Number(settings.data.autoLockMinutes) || 0;
+        const idle = powerMonitor.getSystemIdleTime();
+        if (process.env.CLU_DEBUG) console.log(`[autolock] idle=${idle}s threshold=${minutes * 60}s enabled=${appLock.enabled} locked=${appLock.locked}`);
+        if (minutes > 0 && idle >= minutes * 60) engage("idle");
+    }, 15000);
+    powerMonitor.on("lock-screen", () => { if (settings.data.lockWithWindows) engage("windows"); });
+}
+
 // ---------- web tabs session ----------
 
 function setupWebSession() {
@@ -497,6 +516,7 @@ app.whenReady().then(() => {
     appLock = new AppLock(app.getPath("userData"));
     assistant = new Assistant(app.getPath("userData"));
     media = new MediaBridge(send);
+    setupAutoLock();
     ptys = new PtyManager(send);
     protocol.handle("clu-file", handleFileProtocol);
     setupWebSession();

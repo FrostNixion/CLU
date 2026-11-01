@@ -24,6 +24,8 @@ function defaults() {
         pinnedApps: [],
         notifyAfterSeconds: 10,
         restoreSession: true,
+        autoLockMinutes: 15,
+        lockWithWindows: true,
         webHome: "https://duckduckgo.com",
         keyboard: detectKeyboard(),
         showKeyboard: true,

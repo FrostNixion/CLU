@@ -631,6 +631,7 @@ async function main() {
     bus.on("clu", (args, cwd, s) => handleClu(args, cwd, s).catch(e => toast(e.message, "error")));
     bus.on("modals-empty", () => session() && session().focus());
     bus.on("ai-explain", (block, s) => explainBlock(() => s, block));
+    window.clu.lock.onEngaged(() => showLock());
     window.addEventListener("resize", () => tabs && tabs.session && tabs.session.scheduleFit());
 
     registerCommands();
