@@ -23,9 +23,17 @@ $groups = [ordered]@{
         @('clu unpin <name>',                'remove a pinned app'),
         @('clu web [url|search]',            'open a browser tab inside CLU')
     )
+    'AI' = @(
+        @('clu ask <question>',              'ask Claude; answers come with Run / Insert buttons'),
+        @('clu ai explain',                  'explain the last command (Ctrl+Alt+E)'),
+        @('clu ai key | clu ai forget',      'set / remove your Anthropic API key')
+    )
     'TERMINAL & SYSTEM' = @(
         @('clu tab [command]',               'new tab here, optionally running a command'),
+        @('clu split [right|down]',          'split the current pane (Alt+Shift+= / Alt+Shift+-)'),
+        @('clu copy',                        'copy the last command''s output (Ctrl+Alt+C)'),
         @('clu run <command>',               'type a command into the active tab (handy with bind)'),
+        @('clu play | pause | next | prev',  'control whatever media is playing'),
         @('clu top',                         'process manager'),
         @('clu notify <text>',               'toast + system notification'),
         @('clu kb [on|off|en-US|tr-TR-Q]',   'on-screen keyboard'),
@@ -43,6 +51,7 @@ $groups = [ordered]@{
     'APP' = @(
         @('clu settings',                    'settings editor (Ctrl+,)'),
         @('clu palette',                     'command palette (Ctrl+Shift+P)'),
+        @('clu plugins [dir|reload]',        'installed plugins / open the plugins folder'),
         @('clu reload | clu quit',           'reload the UI / quit CLU')
     )
 }

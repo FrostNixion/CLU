@@ -17,7 +17,13 @@ if [ $# -eq 0 ] || [ "$1" = "help" ] || [ "$1" = "-h" ] || [ "$1" = "--help" ]; 
         'clu pin <app|url> [name]' 'pin an app or website to the tab bar' \
         'clu unpin <name>' 'remove a pinned app' \
         'clu web [url|search]' 'open a browser tab inside CLU' \
+        'clu ask <question>' 'ask Claude; answers come with Run / Insert buttons' \
+        'clu ai explain|key|forget' 'explain last command / set or remove API key' \
         'clu tab [command]' 'new tab here, optionally running a command' \
+        'clu split [right|down]' 'split the current pane' \
+        'clu copy' 'copy the last command output' \
+        'clu play|pause|next|prev' 'control whatever media is playing' \
+        'clu plugins [dir|reload]' 'installed plugins / plugins folder' \
         'clu run <command>' 'type a command into the active tab' \
         'clu top' 'process manager' \
         'clu notify <text>' 'toast + system notification' \
