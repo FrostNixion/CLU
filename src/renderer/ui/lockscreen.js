@@ -35,7 +35,6 @@ export function showLock() {
         clock, date,
         h("div.lock-ring", h("div.lock-ring-inner"), h("span.lock-logo", "CLU")),
         h("h2.lock-title", "AUTHORIZATION REQUIRED"),
-        h("div.lock-user", `${(store.get("username") || store.info.username || "user").toUpperCase()}@${(store.info.hostname || "").toUpperCase()}`),
         slots, status, pad,
         h("div.lock-hint", "type your password and press Enter"),
         input);

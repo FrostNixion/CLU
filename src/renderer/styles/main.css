@@ -548,7 +548,6 @@ iframe.viewer-pdf { width: 100%; height: 100%; border: none; background: #fff; }
 .lock-box.granted .lock-ring::before { border-color: var(--accent); animation-duration: .6s; box-shadow: 0 0 3vh var(--accent-dim); }
 .lock-logo { font-size: 3.6vh; font-weight: 600; letter-spacing: .8vh; padding-left: .8vh; }
 .lock-title { margin: 0; font-size: 2.2vh; letter-spacing: .6vh; font-weight: 600; }
-.lock-user { font-size: 1.3vh; letter-spacing: .3vh; opacity: .55; }
 .lock-slots { display: flex; gap: 1vh; margin: 1.2vh 0 .4vh; min-height: 3.6vh; }
 .lock-slot { width: 2.6vh; height: 3.6vh; border: 1px solid var(--accent-dim); background: var(--accent-ghost); transition: background .1s, box-shadow .1s; }
 .lock-slot.filled { background: var(--accent); box-shadow: 0 0 1.2vh var(--accent-dim); }
